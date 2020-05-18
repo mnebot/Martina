@@ -11,6 +11,8 @@
 #Es comunica amb el robot mitjançant les llibreries de robotical.io martypy https://robotical.io/
 
 #També es comunica amb altres coses com llums o la tele, fa fotos, envia correus ... https://trello.com/b/3mHrU0Km
+
+# reconeix objectes i persones utilitzant la llibreria cv2 i face_recognition
    
 #"""
 
@@ -21,9 +23,11 @@ import aiy.voicehat
 import cv2
 import datetime
 import decimal
+import face_recognition
 import json
 import martypy
 import math
+import numpy as np
 import os
 import picamera
 import requests
@@ -70,6 +74,8 @@ class Martina:
             self.adeu()
         elif 'xuta' in accio:
             self.xutaObjecte(accio)
+        elif 'hola' in accio:
+            self.reconeixPersona(accio)
         else:
             print('Acció no identificada')
 
@@ -112,7 +118,7 @@ class Martina:
         print("Entra a adéu")
         try:    
             os.system(" echo 'Fins aviat!' | festival --language catalan --tts")
-            self.mymarty.hello()
+            quit()
         except Exception as e:
            print("Unexpected error dient Adéu: ", str(e))
            self.initResetMarty()
@@ -237,6 +243,110 @@ class Martina:
         except Exception as e:
            print("Unexpected error: ", str(e))
            self.initResetMarty()
+           
+    # Si reconeix l'objectte s'hi acosta i el xuta
+    def xutaObjecte(self, accio):
+        
+        # identifica objecte a xutar (cotxe o pilota)
+        objecte = "cotxe";
+        if('pilota' in accio):
+            objecte = "pilota"
+            
+        # Detecta l'objecte
+        
+        # caputura imatge i cerca objectes
+        # reconèixer objectes
+        nomImatge = '/home/pi/image_' + str(datetime.datetime.now()) + '.jpg'
+        self.camera.capture(nomImatge)
+        image = cv2.imread(nomImatge)
+
+        # inicia intent
+        # estic prou aprop? sí -> xuta ; no -> acostat
+        image_height, image_width, _ = image.shape
+
+        self.model.setInput(cv2.dnn.blobFromImage(image, size=(300, 300), swapRB=True))
+        output = self.model.forward()
+
+        for detection in output[0, 0, :, :]:
+            confidence = detection[2]
+            if confidence > .5:
+                class_id = detection[1]
+                class_name = self.id_class_name(class_id)
+                if(objecte == class_name):
+                    print(str(str(class_id) + " " + str(detection[2])  + " " + class_name))
+                    box_x = detection[3] * image_width
+                    box_y = detection[4] * image_height
+                    box_width = detection[5] * image_width
+                    box_height = detection[6] * image_height
+                    cv2.rectangle(image, (int(box_x), int(box_y)), (int(box_width), int(box_height)), (23, 230, 210), thickness=1)
+                    cv2.putText(image,class_name ,(int(box_x), int(box_y+.05*image_height)),cv2.FONT_HERSHEY_SIMPLEX,(.005*image_width),(0, 0, 255))
+                    cv2.imshow('image', image)
+                    cv2.waitKey(0)
+                    cv2.destroyAllWindows()
+                    break
+                
+        # Realitza tracking de l'objecte
+        # mentre s'hi acosta mira si ja pot xutar
+        # xuta
+        #self.mymarty.kick('right')
+
+
+    # Si reconeix la persona li diu hola i el nom
+    def reconeixPersona(self, accio):
+        print("Entra a Hola (reconeix persona)")
+        try:        
+            
+            # Initialize some variables
+            face_locations = []
+            face_encodings = []
+            output = np.empty((240, 320, 3), dtype=np.uint8)
+
+            print("Capturing image.")
+            self.camera.capture(output, format="rgb")
+
+            # Find all the faces and face encodings in the current frame of video
+            face_locations = face_recognition.face_locations(output)
+            print("Found {} faces in image.".format(len(face_locations)))
+            face_encodings = face_recognition.face_encodings(output, face_locations)
+            print(face_encodings)
+
+            hatrobatalgu = False
+            # Loop over each face found in the frame to see if it's someone we know.
+            print("Per a cada cara trobada mira si hi reconeix algú")
+            for face_encoding in face_encodings:
+                print(face_encoding)
+                
+                # See if the face is a match for the known face(s)
+                matchmarcal = face_recognition.compare_faces([self.marcal_face_encoding], face_encoding)
+                matcharnau = face_recognition.compare_faces([self.arnau_face_encoding], face_encoding)
+                matchmariona = face_recognition.compare_faces([self.mariona_face_encoding], face_encoding)
+                matchmontse = face_recognition.compare_faces([self.montse_face_encoding], face_encoding)
+                if matchmarcal[0]:
+                    print("He trobat la cara del Marçal")
+                    os.system(" echo 'Hola Marsal!' | festival --language catalan --tts")
+                    hatrobatalgu = True
+                if matcharnau[0]:
+                    print("He trobat la cara de l'Arnau")
+                    os.system(" echo 'Hola Arnau!' | festival --language catalan --tts")
+                    hatrobatalgu = True
+                if matchmariona[0]:
+                    print("He trobat la cara de la Mariona")
+                    os.system(" echo 'Hola Mariona!' | festival --language catalan --tts")
+                    hatrobatalgu = True
+                if matchmontse[0]:
+                    print("He trobat la cara de la Montse")
+                    os.system(" echo 'Hola Montse!' | festival --language catalan --tts")
+                    hatrobatalgu = True
+
+            if hatrobatalgu is False:
+                print("No he reconegut cap cara")
+                os.system(" echo 'Qui ha dit hola?' | festival --language catalan --tts")
+                    
+        except Exception as e:
+            print("Unexpected error: ", str(e))
+            self.initResetMarty()
+            
+
 
     # MÈTODES ACCESSORIS
   
@@ -294,51 +404,7 @@ class Martina:
         server.sendmail(fromaddr, toaddr, text)
         server.quit()
         
-    # Si reconeix l'objectte s'hi acosta i el xuta
-    def xutaObjecte(self, accio):
-        
-        # identifica objecte a xutar (cotxe o pilota)
-        objecte = "cotxe";
-        if('pilota' in accio):
-            objecte = "pilota"
-            
-        # Realitza intents fins que pot xutar l'objecte (un màxim de 7 vegades)
-        maxim = 7
-        intents = 0
-        
-        # caputura imatge i cerca objectes
-        # reconèixer objectes
-        nomImatge = '/home/pi/image_' + str(datetime.datetime.now()) + '.jpg'
-        self.camera.capture(nomImatge)
-        image = cv2.imread(nomImatge)
 
-        # inicia intent
-        # estic prou aprop? sí -> xuta ; no -> acostat
-        image_height, image_width, _ = image.shape
-
-        self.model.setInput(cv2.dnn.blobFromImage(image, size=(300, 300), swapRB=True))
-        output = self.model.forward()
-
-
-        for detection in output[0, 0, :, :]:
-            confidence = detection[2]
-            if confidence > .5:
-                class_id = detection[1]
-                class_name = self.id_class_name(class_id)
-                if(objecte == class_name):
-                    print(str(str(class_id) + " " + str(detection[2])  + " " + class_name))
-                    box_x = detection[3] * image_width
-                    box_y = detection[4] * image_height
-                    box_width = detection[5] * image_width
-                    box_height = detection[6] * image_height
-                    cv2.rectangle(image, (int(box_x), int(box_y)), (int(box_width), int(box_height)), (23, 230, 210), thickness=1)
-                    cv2.putText(image,class_name ,(int(box_x), int(box_y+.05*image_height)),cv2.FONT_HERSHEY_SIMPLEX,(.005*image_width),(0, 0, 255))
-                    cv2.imshow('image', image)
-                    cv2.waitKey(0)
-                    cv2.destroyAllWindows()
-        # si existeix s'hi acosta
-        # xuta
-        #self.mymarty.kick('right')
         
         
            
@@ -373,6 +439,7 @@ class Martina:
         self.recognizer.expect_phrase('adéu')
         self.recognizer.expect_phrase('xuta la pilota')
         self.recognizer.expect_phrase('xuta el cotxe')
+        self.recognizer.expect_phrase('hola')
 
         # Inicialitza el gravador de veu per a què el reconeixedor pugi començar a
         # reconèixer comandes de veu
@@ -415,7 +482,20 @@ class Martina:
         self.model = cv2.dnn.readNetFromTensorflow('models/frozen_inference_graph.pb',
                                       'models/ssd_mobilenet_v2_coco_2018_03_29.pbtxt')
         print('Model inicialitzat')
-        
+
+
+    def inicialitzaCares(self):
+            # Carregant cares conegudes (això s'hauria de posar a l'inici)
+            marcal_image = face_recognition.load_image_file("/home/pi/AIY-projects-python/src/imatges/marcal.jpg")
+            arnau_image = face_recognition.load_image_file("/home/pi/AIY-projects-python/src/imatges/arnau.jpg")
+            mariona_image = face_recognition.load_image_file("/home/pi/AIY-projects-python/src/imatges/mariona.jpg")
+            montse_image = face_recognition.load_image_file("/home/pi/AIY-projects-python/src/imatges/montse.jpg")
+            self.marcal_face_encoding = face_recognition.face_encodings(marcal_image)[0]
+            self.arnau_face_encoding = face_recognition.face_encodings(arnau_image)[0]
+            self.mariona_face_encoding = face_recognition.face_encodings(mariona_image)[0]
+            self.montse_face_encoding = face_recognition.face_encodings(montse_image)[0]
+            print('Cares inicialitzades')
+       
     # Inicialitza la Martina: el reconeixedor de veu, el Marty the robot, la càmera, etc ...
     def __init__(self):
         
@@ -429,6 +509,8 @@ class Martina:
         
         # inicialitza la càmera
         self.camera = picamera.PiCamera()
+        # redueix la resolució
+        self.camera.resolution = (320, 240)
         print('Càmera inicialitzada')
         
         # inicialitza llums
@@ -440,6 +522,9 @@ class Martina:
         
         # inicialitza model per a reconèixer objectes
         self.inicialitzaModelImatges()
+
+        # inicialitza cares conegudes
+        self.inicialitzaCares()
 
         #Saluda
         print('Martina inicialitzada')
