@@ -76,6 +76,8 @@ class Martina:
             self.xutaObjecte(accio)
         elif 'hola' in accio:
             self.reconeixPersona(accio)
+        elif 'recita' in accio:
+            self.recita()
         else:
             print('Acció no identificada')
 
@@ -152,11 +154,11 @@ class Martina:
            self.mymarty.eyes(20,move_time=500)
            
            # transforma la foto
-           imatge = Image.open(nomImatge)
-           imatgeInvertida = imatge.rotate(180)
-           nomImatge = 'imatge_' + str(datetime.datetime.now()) + '_rotate.jpg'
-           imatgeInvertida.save('/home/pi/' + nomImatge)
-           
+##           imatge = Image.open(nomImatge)
+ #          imatgeInvertida = imatge.rotate(180)
+  #         nomImatge = 'imatge_' + str(datetime.datetime.now()) + '_rotate.jpg'
+   #        imatgeInvertida.save('/home/pi/' + nomImatge)
+                    
            # Envia la foto per correu
            self.enviaCorreu('mnebot@gmail.com',
                             'Foto de la Martina',
@@ -212,7 +214,22 @@ class Martina:
         except Exception as e:
            print("Unexpected error: ", str(e))
            self.initResetMarty()
+
+    def recita(self):
+        print("Entra a recita")
+        try:
+           self.mymarty.eyes(20,500)
+           self.mymarty.arms(0,127,200) #puja el braç dret a 90 graus amb mig segon
+                       
+           os.system(" echo 'QUAN SOMRIUS de Josep Tio' | festival --language catalan --tts")
+           os.system(" echo 'Es Nadal al meu cor, quan somrius content de veurem, quan quan la nit es fa més pres, t abraces al meu cos.' | festival --language catalan --tts")
+           os.system(" echo 'I les llums de colors, m il·luminen nit i dia, les encens amb el somriure, quan em partes amb el cor.' | festival --language catalan --tts")
             
+           self.mymarty.hello()
+        except Exception as e:
+           print("Unexpected error: ", str(e))
+           self.initResetMarty()
+
     def guapa(self):
         print("Entra a guapa")
         try:
@@ -386,9 +403,9 @@ class Martina:
         body = missatge
          
         msg.attach(MIMEText(body, 'plain'))
-         
+        
         filename = fitxer
-        attachment = open("/home/pi/"+filename, "rb")
+        attachment = open(filename, "rb")
          
         part = MIMEBase('application', 'octet-stream')
         part.set_payload((attachment).read())
@@ -396,17 +413,18 @@ class Martina:
         part.add_header('Content-Disposition', "attachment; filename= %s" % filename)
          
         msg.attach(part)
-         
+        
+        print("Envia foto: abans de crear el servidor")
         server = smtplib.SMTP('smtp.gmail.com', 587)
+        print("Envia foto: servidor creat i connectat")
         server.starttls()
-        server.login(fromaddr, "Martina37$")
+        print("Envia foto: tls configurat")
+        server.login(fromaddr, "guluxlufsxrjwqpn")
+        print("Envia foto: loggejat")
         text = msg.as_string()
         server.sendmail(fromaddr, toaddr, text)
-        server.quit()
-        
-
-        
-        
+        print("Envia foto: mail enviat")
+        #server.quit()        
            
            
     # MÈTODES INICIALITZADORS
@@ -440,6 +458,7 @@ class Martina:
         self.recognizer.expect_phrase('xuta la pilota')
         self.recognizer.expect_phrase('xuta el cotxe')
         self.recognizer.expect_phrase('hola')
+        self.recognizer.expect_phrase('recita')
 
         # Inicialitza el gravador de veu per a què el reconeixedor pugi començar a
         # reconèixer comandes de veu
