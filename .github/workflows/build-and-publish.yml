@@ -6,6 +6,10 @@ on:
       - 'v*'
   workflow_dispatch:
 
+permissions:
+  contents: read
+  packages: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -30,14 +34,14 @@ jobs:
           path: dist/*
 
       - name: Publish to PyPI (optional)
-        if: secrets.PYPI_API_TOKEN != ''
+        if: ${{ secrets.PYPI_API_TOKEN != '' }}
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           user: __token__
           password: ${{ secrets.PYPI_API_TOKEN }}
 
       - name: Publish to GitHub Packages (optional)
-        if: secrets.GITHUB_PACKAGES_TOKEN != ''
+        if: ${{ secrets.GITHUB_PACKAGES_TOKEN != '' || secrets.GITHUB_TOKEN != '' }}
         run: |
           python -m pip install --upgrade twine
-          python -m twine upload --repository-url https://upload.pkg.github.com/${{ github.repository_owner }} -u ${{ github.actor }} -p ${{ secrets.GITHUB_PACKAGES_TOKEN }} dist/*
+          python -m twine upload --repository-url https://upload.pkg.github.com/${{ github.repository }} -u ${{ github.actor }} -p ${{ secrets.GITHUB_PACKAGES_TOKEN || secrets.GITHUB_TOKEN }} dist/*
