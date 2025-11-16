@@ -1,0 +1,57 @@
+name: Deploy to Raspberry Pi
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - master
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Upgrade pip and install build
+        run: python -m pip install --upgrade pip build wheel
+
+      - name: Build wheel
+        run: python -m build -w
+
+      - name: Copy wheel to Raspberry Pi
+        uses: appleboy/scp-action@v0.1.5
+        with:
+          host: ${{ secrets.PI_HOST }}
+          username: ${{ secrets.PI_USER }}
+          key: ${{ secrets.PI_SSH_KEY }}
+          port: ${{ secrets.PI_SSH_PORT }}
+          source: "dist/*.whl"
+          target: "/tmp/"
+
+      - name: SSH to Raspberry Pi and install wheel inside venv
+        uses: appleboy/ssh-action@v0.1.6
+        with:
+          host: ${{ secrets.PI_HOST }}
+          username: ${{ secrets.PI_USER }}
+          key: ${{ secrets.PI_SSH_KEY }}
+          port: ${{ secrets.PI_SSH_PORT }}
+          script: |
+            set -e
+            PYTHON_BIN=python3
+            # Ensure pip and venv support
+            $PYTHON_BIN -m pip install --user --upgrade pip virtualenv || true
+            VENV_DIR="$HOME/martina-venv"
+            if [ ! -d "$VENV_DIR" ]; then
+              $PYTHON_BIN -m venv "$VENV_DIR"
+            fi
+            # Activate venv and install wheel
+            . "$VENV_DIR/bin/activate"
+            pip install --upgrade pip
+            pip install /tmp/*.whl
+            deactivate
+            rm -f /tmp/*.whl

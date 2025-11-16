@@ -1,0 +1,16 @@
+# Example configuration. Do NOT commit secrets. Use GitHub Secrets for CI.
+smtp:
+  user: your-email@example.com
+  # set SMTP password via secret environment variable or CI secret
+
+hue:
+  ip: 192.168.0.10
+  user: your-hue-username
+
+tv:
+  ip: 192.168.0.16
+
+raspberry:
+  user: pi
+  host: 192.168.0.100
+  ssh_port: 22
