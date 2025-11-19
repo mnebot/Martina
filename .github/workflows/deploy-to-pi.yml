@@ -5,6 +5,8 @@ on:
   push:
     branches:
       - master
+permissions:
+  id-token: write # This is required for the tailscale action to request a JWT from GitHub
 
 jobs:
   deploy:
@@ -17,13 +19,19 @@ jobs:
         with:
           python-version: '3.9'
 
+      - name: Tailscale
+        uses: tailscale/github-action@v2
+        with:
+          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
+          tags: tag:ci
+
       - name: SSH to Raspberry Pi and install package from PyPI
         uses: appleboy/ssh-action@v0.1.6
         with:
-          host: ${{ secrets.PI_HOST }}
+          host: ${{ secrets.PI_TAILSCALE_IP }}
           username: ${{ secrets.PI_USER }}
           password: ${{ secrets.PI_PASSWORD }}
-          port: ${{ secrets.PI_SSH_PORT }}
           script: |
             set -e
             PYTHON_BIN=python3
