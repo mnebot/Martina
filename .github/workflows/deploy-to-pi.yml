@@ -2,9 +2,11 @@ name: Deploy to Raspberry Pi
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - master
+  workflow_run:
+      workflows: ["publish-to-pypi.yml"] 
+      types: [completed]
+
+      branches: [main] 
 permissions:
   id-token: write # This is required for the tailscale action to request a JWT from GitHub
 
@@ -26,5 +28,5 @@ jobs:
           username: ${{ secrets.PI_USER }}
           password: ${{ secrets.PI_PASSWORD }}
           script: |
-            pip install --upgrade martinaPI
+            python3 -m pip install --upgrade martinaPI
             #martinapi.sh >> martina-$(date +%Y-%m-%d).log 2>&1
