@@ -26,6 +26,12 @@ jobs:
           oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
           tags: tag:ci
 
+      - name: Validate connection to Raspberry Pi (100.109.164.20)
+        run: |
+          echo "Attempting to ping 100.109.164.20..."
+          # Utilitza 'ping' amb -c 5 per enviar 5 paquets
+          ping -c 5 100.109.164.20
+      
       - name: SSH to Raspberry Pi and install package from PyPI
         uses: appleboy/ssh-action@v0.1.6
         with:
@@ -47,4 +53,4 @@ jobs:
             pip install --upgrade martinaPI
             deactivate
             # Create a simple script to run martina from the venv
-            martina.sh
+            martina.sh >> martina-$(date +%Y-%m-%d).log 2>&1
