@@ -12,13 +12,6 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.9'
-
       - name: Tailscale
         uses: tailscale/github-action@v2
         with:
@@ -33,18 +26,5 @@ jobs:
           username: ${{ secrets.PI_USER }}
           password: ${{ secrets.PI_PASSWORD }}
           script: |
-            set -e
-            PYTHON_BIN=python3
-            # Ensure pip and venv support
-            $PYTHON_BIN -m pip install --user --upgrade pip virtualenv || true
-            VENV_DIR="$HOME/AIY-projects-python"
-            if [ ! -d "$VENV_DIR" ]; then
-              $PYTHON_BIN -m venv "$VENV_DIR"
-            fi
-            # Activate venv and install package
-            . "$VENV_DIR/bin/activate"
-            pip install --upgrade pip
             pip install --upgrade martinaPI
-            deactivate
-            # Create a simple script to run martina from the venv
-            martina.sh >> martina-$(date +%Y-%m-%d).log 2>&1
+            #martinapi.sh >> martina-$(date +%Y-%m-%d).log 2>&1

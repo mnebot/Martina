@@ -586,9 +586,13 @@ class Martina:
 #
 
 #Crea una instància de Martina
-martina = Martina()
+def main():
+    martina = Martina()
 
-# Escolta i quan es digui "Matina [acció]" executa l'acció, i així anar fent
-while True:
-    # Escolta i reconeix a text el que s'escolta després de dir "Martina"        
-    martina.executaAccio(martina.recognize())
+    # Escolta i quan es digui "Matina [acció]" executa l'acció, i així anar fent
+    while True:
+        # Escolta i reconeix a text el que s'escolta després de dir "Martina"        
+        martina.executaAccio(martina.recognize())
+
+if __name__ == '__main__':
+    main()
