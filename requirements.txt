@@ -5,3 +5,4 @@ numpy==1.19.2
 picamera==1.13
 Pillow==8.1.1
 pylgtv==0.1.9
+PyYAML==5.4.1

@@ -32,6 +32,8 @@ import os
 import picamera
 import requests
 import smtplib
+import yaml
+from pathlib import Path
 
 
 from email.mime.multipart import MIMEMultipart
@@ -44,6 +46,19 @@ from pylgtv import WebOsClient
 
 
 class Martina:
+
+    # Load configuration file if present
+    def _load_config(self, path='config.yml'):
+        try:
+            if os.path.exists(path):
+                with open(path, 'r') as f:
+                    return yaml.safe_load(f) or {}
+            elif os.path.exists('config.example.yml'):
+                with open('config.example.yml', 'r') as f:
+                    return yaml.safe_load(f) or {}
+        except Exception as e:
+            print('Error carregant configuració:', e)
+        return {}
               
     # Identifica i executa l'acció
     def executaAccio(self,accio):
@@ -390,41 +405,50 @@ class Martina:
     
     # Envia un correu amb un document adjunt
     def enviaCorreu(self, to, assumpte, missatge, fitxer):
-        
-        fromaddr = "martina3794@gmail.com"
+        # Read SMTP configuration from config (or env var for password)
+        smtp_cfg = self.config.get('smtp', {}) if hasattr(self, 'config') else {}
+        fromaddr = smtp_cfg.get('user', 'martina3794@gmail.com')
+        smtp_host = smtp_cfg.get('host', 'smtp.gmail.com')
+        smtp_port = smtp_cfg.get('port', 587)
+        smtp_password = os.environ.get('SMTP_PASSWORD') or smtp_cfg.get('password')
+
         toaddr = to
-         
+
         msg = MIMEMultipart()
-         
         msg['From'] = fromaddr
         msg['To'] = toaddr
         msg['Subject'] = assumpte
-         
+
         body = missatge
-         
         msg.attach(MIMEText(body, 'plain'))
-        
+
         filename = fitxer
-        attachment = open(filename, "rb")
-         
-        part = MIMEBase('application', 'octet-stream')
-        part.set_payload((attachment).read())
-        encoders.encode_base64(part)
-        part.add_header('Content-Disposition', "attachment; filename= %s" % filename)
-         
-        msg.attach(part)
-        
-        print("Envia foto: abans de crear el servidor")
-        server = smtplib.SMTP('smtp.gmail.com', 587)
-        print("Envia foto: servidor creat i connectat")
-        server.starttls()
-        print("Envia foto: tls configurat")
-        server.login(fromaddr, "guluxlufsxrjwqpn")
-        print("Envia foto: loggejat")
-        text = msg.as_string()
-        server.sendmail(fromaddr, toaddr, text)
-        print("Envia foto: mail enviat")
-        #server.quit()        
+        try:
+            with open(filename, 'rb') as attachment:
+                part = MIMEBase('application', 'octet-stream')
+                part.set_payload(attachment.read())
+            encoders.encode_base64(part)
+            part.add_header('Content-Disposition', f"attachment; filename={Path(filename).name}")
+            msg.attach(part)
+
+            print("Envia foto: abans de crear el servidor")
+            server = smtplib.SMTP(smtp_host, smtp_port)
+            print("Envia foto: servidor creat i connectat")
+            server.starttls()
+            print("Envia foto: tls configurat")
+            if smtp_password:
+                server.login(fromaddr, smtp_password)
+                print("Envia foto: loggejat")
+            else:
+                print("Envia foto: No SMTP password configured; attempting send without auth")
+            text = msg.as_string()
+            server.sendmail(fromaddr, toaddr, text)
+            print("Envia foto: mail enviat")
+        finally:
+            try:
+                server.quit()
+            except Exception:
+                pass
            
            
     # MÈTODES INICIALITZADORS
@@ -466,8 +490,9 @@ class Martina:
         print('Reconeixedor de veu inicialitzat')
 
     def inicialitzaHue(self):
-        ipHue = '192.168.0.10'
-        nomUsuari = 'juCDLs2nNnys46uLoWngh26Vt4v6dm8DpS03CJ0g'
+        hue_cfg = self.config.get('hue', {}) if hasattr(self, 'config') else {}
+        ipHue = hue_cfg.get('ip', '192.168.0.10')
+        nomUsuari = hue_cfg.get('user', 'juCDLs2nNnys46uLoWngh26Vt4v6dm8DpS03CJ0g')
         self.urlLamparaLavabo = 'http://' + ipHue + '/api/' + nomUsuari + '/lights/3/state'
         print('Hue inicialitzat')
         
@@ -517,7 +542,9 @@ class Martina:
        
     # Inicialitza la Martina: el reconeixedor de veu, el Marty the robot, la càmera, etc ...
     def __init__(self):
-        
+        # Load configuration
+        self.config = self._load_config()
+
         # inicialitza el reconeixedor de veu i comença a escoltar
         aiy.i18n.set_language_code('ca-ES')
         self.recognizer = aiy.cloudspeech.get_recognizer()
@@ -536,7 +563,8 @@ class Martina:
         self.inicialitzaHue()
         
         # inicialitza la tele LG
-        self.webos_client = WebOsClient('192.168.0.16')
+        tv_ip = self.config.get('tv', {}).get('ip', '192.168.0.16')
+        self.webos_client = WebOsClient(tv_ip)
         print('TV inicialitzada')
         
         # inicialitza model per a reconèixer objectes
