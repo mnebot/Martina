@@ -37,7 +37,7 @@ jobs:
             PYTHON_BIN=python3
             # Ensure pip and venv support
             $PYTHON_BIN -m pip install --user --upgrade pip virtualenv || true
-            VENV_DIR="$HOME/martina-venv"
+            VENV_DIR="$HOME/AIY-projects-python"
             if [ ! -d "$VENV_DIR" ]; then
               $PYTHON_BIN -m venv "$VENV_DIR"
             fi
@@ -46,3 +46,5 @@ jobs:
             pip install --upgrade pip
             pip install --upgrade martinaPI
             deactivate
+            # Create a simple script to run martina from the venv
+            martina.sh
