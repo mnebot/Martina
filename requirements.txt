@@ -6,3 +6,4 @@ picamera>=1.13
 Pillow>=10.0.0
 pylgtv>=0.1.9
 PyYAML>=6.0
+aiyprojects>=1.4
